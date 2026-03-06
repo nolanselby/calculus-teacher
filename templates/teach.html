@@ -1,0 +1,406 @@
+{% extends "base.html" %}
+{% block title %} — Formulas{% endblock %}
+
+{% block content %}
+<div class="teach-page">
+
+  <!-- Hero -->
+  <div class="teach-hero text-center mb-5">
+    <h1 class="fw-bold page-title">Formula Reference</h1>
+    <p class="text-muted">Everything you need for Calculus 1, 2, and 3 — with worked examples and intuition.</p>
+
+    <!-- Search -->
+    <div class="teach-search-wrap mt-4">
+      <div class="teach-search-inner">
+        <i class="bi bi-search teach-search-icon"></i>
+        <input
+          type="text"
+          id="formula-search"
+          class="teach-search-input"
+          placeholder="Search formulas, rules, theorems…"
+          autocomplete="off"
+          oninput="handleSearch(this.value)"
+        />
+        <button class="teach-search-clear d-none" id="search-clear-btn" onclick="clearSearch()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Results (hidden until active) -->
+  <div id="search-results-section" class="d-none mb-5">
+    <h5 class="teach-section-label mb-3">
+      <span id="search-result-count"></span>
+    </h5>
+    <div id="search-results-grid" class="formula-grid"></div>
+  </div>
+
+  <!-- Main content (level tabs + cards) -->
+  <div id="main-content">
+
+    <!-- Calc Level Tabs -->
+    <div class="teach-level-tabs mb-5">
+      {% for level_key, level in formulas.items() %}
+      <button
+        class="teach-level-tab {% if loop.first %}active{% endif %}"
+        data-level="{{ level_key }}"
+        onclick="setLevel('{{ level_key }}')"
+      >
+        {{ level.label }}
+      </button>
+      {% endfor %}
+    </div>
+
+    {% for level_key, level in formulas.items() %}
+    <div class="teach-level-panel {% if not loop.first %}d-none{% endif %}" id="level-{{ level_key }}">
+
+      <!-- Overview -->
+      <div class="teach-overview mb-5">
+        <div class="teach-overview-inner">
+          <div class="teach-overview-icon"><i class="bi bi-lightbulb-fill"></i></div>
+          <p class="mb-0">{{ level.overview }}</p>
+        </div>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div class="teach-category-pills mb-4" id="pills-{{ level_key }}">
+        <button class="teach-cat-pill active" data-cat="all" onclick="filterCategory('{{ level_key }}', 'all', this)">
+          All
+        </button>
+        {% for cat in level.categories %}
+        <button class="teach-cat-pill" data-cat="{{ loop.index0 }}" onclick="filterCategory('{{ level_key }}', {{ loop.index0 }}, this)">
+          <i class="{{ cat.icon }} me-1"></i>{{ cat.name }}
+        </button>
+        {% endfor %}
+      </div>
+
+      <!-- Categories + Formula Cards -->
+      {% for cat in level.categories %}
+      {% set catIdx = loop.index0 %}
+      <div class="teach-category-block mb-5" data-level="{{ level_key }}" data-cat-index="{{ catIdx }}">
+        <div class="teach-category-header mb-3">
+          <div class="teach-category-icon">
+            <i class="{{ cat.icon }}"></i>
+          </div>
+          <h3 class="teach-category-name">{{ cat.name }}</h3>
+          <span class="teach-category-count">{{ cat.formulas | length }} formula{% if cat.formulas | length != 1 %}s{% endif %}</span>
+        </div>
+
+        <div class="formula-grid">
+          {% for f in cat.formulas %}
+          <div
+            class="formula-card"
+            data-level="{{ level_key }}"
+            data-cat="{{ catIdx }}"
+            data-name="{{ f.name | lower }}"
+            data-meaning="{{ f.meaning | lower }}"
+            data-when="{{ f.when | lower }}"
+            onclick="openFormulaModal('{{ level_key }}', {{ catIdx }}, {{ loop.index0 }})"
+          >
+            <div class="formula-card-name">{{ f.name }}</div>
+            <div class="formula-card-latex">
+              \( {{ f.formula }} \)
+            </div>
+            <div class="formula-card-meaning">{{ f.meaning }}</div>
+            <div class="formula-card-footer">
+              <span class="formula-card-tag">
+                <i class="bi bi-tag-fill me-1"></i>{{ cat.name }}
+              </span>
+              <span class="formula-card-arrow"><i class="bi bi-arrow-right"></i></span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<!-- ── Formula Detail Modal ──────────────────────────────────────────────── -->
+<div id="formula-modal-overlay" class="formula-modal-overlay d-none" onclick="handleModalOverlayClick(event)">
+  <div class="formula-modal" id="formula-modal">
+
+    <div class="formula-modal-header">
+      <div>
+        <span class="formula-modal-tag" id="modal-category-tag"></span>
+        <h2 class="formula-modal-title" id="modal-title"></h2>
+      </div>
+      <button class="formula-modal-close" onclick="closeFormulaModal()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <!-- Big Formula Display -->
+    <div class="formula-modal-latex" id="modal-latex"></div>
+
+    <!-- Tab nav inside modal -->
+    <div class="formula-modal-tabs">
+      <button class="formula-modal-tab active" data-tab="meaning" onclick="setModalTab('meaning', this)">Meaning</button>
+      <button class="formula-modal-tab" data-tab="example" onclick="setModalTab('example', this)">Worked Example</button>
+      <button class="formula-modal-tab" data-tab="pitfall" onclick="setModalTab('pitfall', this)">Common Pitfall</button>
+    </div>
+
+    <!-- Tab: Meaning -->
+    <div class="formula-modal-tab-content" id="modal-tab-meaning">
+      <div class="formula-modal-section">
+        <div class="formula-modal-section-label"><i class="bi bi-book me-2"></i>What It Means</div>
+        <p id="modal-meaning" class="formula-modal-text"></p>
+      </div>
+      <div class="formula-modal-section">
+        <div class="formula-modal-section-label"><i class="bi bi-check2-circle me-2"></i>When To Use It</div>
+        <p id="modal-when" class="formula-modal-text"></p>
+      </div>
+      <div class="formula-modal-section formula-modal-intuition">
+        <div class="formula-modal-section-label"><i class="bi bi-lightbulb me-2"></i>Intuition</div>
+        <p id="modal-intuition" class="formula-modal-text mb-0"></p>
+      </div>
+    </div>
+
+    <!-- Tab: Worked Example -->
+    <div class="formula-modal-tab-content d-none" id="modal-tab-example">
+      <div class="formula-modal-section">
+        <div class="formula-modal-section-label"><i class="bi bi-pencil-square me-2"></i>Problem</div>
+        <p id="modal-example-problem" class="formula-modal-text formula-modal-problem-text"></p>
+      </div>
+      <div class="formula-modal-section">
+        <div class="formula-modal-section-label"><i class="bi bi-list-ol me-2"></i>Solution Steps</div>
+        <ol id="modal-example-steps" class="formula-modal-steps"></ol>
+      </div>
+      <div class="formula-modal-section formula-modal-answer-wrap">
+        <div class="formula-modal-section-label"><i class="bi bi-check-circle-fill me-2 text-success"></i>Answer</div>
+        <p id="modal-example-answer" class="formula-modal-text formula-modal-answer mb-0"></p>
+      </div>
+    </div>
+
+    <!-- Tab: Pitfall -->
+    <div class="formula-modal-tab-content d-none" id="modal-tab-pitfall">
+      <div class="formula-modal-pitfall-card">
+        <div class="formula-modal-pitfall-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+        <div>
+          <div class="formula-modal-section-label mb-2">Common Mistake</div>
+          <p id="modal-pitfall" class="mb-0"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer actions -->
+    <div class="formula-modal-footer">
+      <button class="btn-modal-solve" onclick="tryInSolver()">
+        <i class="bi bi-send-fill me-2"></i>Try in Solver
+      </button>
+      <div class="formula-modal-nav-btns">
+        <button class="btn-modal-nav" id="modal-prev-btn" onclick="navigateModal(-1)">
+          <i class="bi bi-chevron-left"></i>
+        </button>
+        <button class="btn-modal-nav" id="modal-next-btn" onclick="navigateModal(1)">
+          <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Formula data from Python ─────────────────────────────────────────────
+const FORMULAS = {{ formulas | tojson }};
+
+// ── Build a flat index for navigation ────────────────────────────────────
+// flatIndex: [{ levelKey, catIdx, fIdx, f, catName, levelLabel }, ...]
+const flatIndex = [];
+for (const [levelKey, level] of Object.entries(FORMULAS)) {
+  level.categories.forEach((cat, catIdx) => {
+    cat.formulas.forEach((f, fIdx) => {
+      flatIndex.push({ levelKey, catIdx, fIdx, f, catName: cat.name, levelLabel: level.label });
+    });
+  });
+}
+
+// ── State ────────────────────────────────────────────────────────────────
+let currentLevel = '{{ formulas.keys() | list | first }}';
+let currentFlatIdx = 0;  // index into flatIndex for modal nav
+
+// ── Level Tabs ───────────────────────────────────────────────────────────
+function setLevel(level) {
+  currentLevel = level;
+  document.querySelectorAll('.teach-level-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.level === level);
+  });
+  document.querySelectorAll('.teach-level-panel').forEach(panel => {
+    panel.classList.toggle('d-none', panel.id !== 'level-' + level);
+  });
+}
+
+// ── Category Filter ──────────────────────────────────────────────────────
+function filterCategory(level, cat, btn) {
+  document.querySelectorAll(`#pills-${level} .teach-cat-pill`).forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+
+  document.querySelectorAll(`[data-level="${level}"].teach-category-block`).forEach(block => {
+    if (cat === 'all') {
+      block.classList.remove('d-none');
+    } else {
+      block.classList.toggle('d-none', parseInt(block.dataset.catIndex) !== parseInt(cat));
+    }
+  });
+}
+
+// ── Search ───────────────────────────────────────────────────────────────
+let searchTimeout = null;
+
+function handleSearch(query) {
+  clearTimeout(searchTimeout);
+  document.getElementById('search-clear-btn').classList.toggle('d-none', !query.trim());
+  if (!query.trim()) { showMainContent(); return; }
+  searchTimeout = setTimeout(() => performSearch(query.trim().toLowerCase()), 150);
+}
+
+function clearSearch() {
+  document.getElementById('formula-search').value = '';
+  document.getElementById('search-clear-btn').classList.add('d-none');
+  showMainContent();
+}
+
+function showMainContent() {
+  document.getElementById('search-results-section').classList.add('d-none');
+  document.getElementById('main-content').classList.remove('d-none');
+}
+
+function performSearch(query) {
+  const results = flatIndex.filter(({ f, catName }) => {
+    return [f.name, f.meaning, f.when, f.intuition || '', catName]
+      .join(' ').toLowerCase().includes(query);
+  });
+
+  document.getElementById('main-content').classList.add('d-none');
+  document.getElementById('search-results-section').classList.remove('d-none');
+  document.getElementById('search-result-count').textContent =
+    results.length === 0 ? 'No formulas found'
+      : `${results.length} formula${results.length !== 1 ? 's' : ''} found`;
+
+  const grid = document.getElementById('search-results-grid');
+  grid.innerHTML = '';
+  results.forEach(item => grid.appendChild(createFormulaCard(item)));
+  if (results.length) MathJax.typesetPromise([grid]);
+}
+
+function createFormulaCard({ levelKey, catIdx, fIdx, f, catName, levelLabel }) {
+  // Find position in flatIndex
+  const idx = flatIndex.findIndex(
+    e => e.levelKey === levelKey && e.catIdx === catIdx && e.fIdx === fIdx
+  );
+  const div = document.createElement('div');
+  div.className = 'formula-card';
+  div.onclick = () => openFormulaModalByFlat(idx);
+  div.innerHTML = `
+    <div class="formula-card-name">${esc(f.name)}</div>
+    <div class="formula-card-latex">\\( ${f.formula} \\)</div>
+    <div class="formula-card-meaning">${esc(f.meaning)}</div>
+    <div class="formula-card-footer">
+      <span class="formula-card-tag"><i class="bi bi-tag-fill me-1"></i>${esc(catName)}</span>
+      <span class="formula-card-badge">${esc(levelLabel)}</span>
+    </div>`;
+  return div;
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Formula Modal ────────────────────────────────────────────────────────
+function openFormulaModal(levelKey, catIdx, fIdx) {
+  const idx = flatIndex.findIndex(
+    e => e.levelKey === levelKey && e.catIdx === catIdx && e.fIdx === fIdx
+  );
+  if (idx >= 0) openFormulaModalByFlat(idx);
+}
+
+function openFormulaModalByFlat(idx) {
+  currentFlatIdx = idx;
+  const { levelKey, catIdx, fIdx, f, catName, levelLabel } = flatIndex[idx];
+
+  document.getElementById('modal-category-tag').textContent = catName + ' · ' + levelLabel;
+  document.getElementById('modal-title').textContent = f.name;
+  document.getElementById('modal-latex').innerHTML = `\\[ ${f.formula} \\]`;
+  document.getElementById('modal-meaning').textContent = f.meaning;
+  document.getElementById('modal-when').textContent = f.when;
+  document.getElementById('modal-intuition').textContent = f.intuition || '';
+
+  // Example
+  document.getElementById('modal-example-problem').innerHTML = f.example.problem;
+  document.getElementById('modal-example-steps').innerHTML =
+    f.example.steps.map(s => `<li class="formula-modal-step">${s}</li>`).join('');
+  document.getElementById('modal-example-answer').innerHTML = f.example.answer;
+
+  // Pitfall
+  document.getElementById('modal-pitfall').textContent = f.pitfall;
+
+  // Nav
+  document.getElementById('modal-prev-btn').disabled = idx === 0;
+  document.getElementById('modal-next-btn').disabled = idx === flatIndex.length - 1;
+
+  // Reset to Meaning tab
+  document.querySelectorAll('.formula-modal-tab-content').forEach(el => el.classList.add('d-none'));
+  document.getElementById('modal-tab-meaning').classList.remove('d-none');
+  document.querySelectorAll('.formula-modal-tab').forEach(b => b.classList.remove('active'));
+  document.querySelector('[data-tab="meaning"]').classList.add('active');
+
+  // Show overlay
+  const overlay = document.getElementById('formula-modal-overlay');
+  overlay.classList.remove('d-none');
+  requestAnimationFrame(() => overlay.classList.add('formula-modal-visible'));
+  document.body.style.overflow = 'hidden';
+
+  MathJax.typesetPromise([document.getElementById('formula-modal')]);
+}
+
+function closeFormulaModal() {
+  const overlay = document.getElementById('formula-modal-overlay');
+  overlay.classList.remove('formula-modal-visible');
+  setTimeout(() => overlay.classList.add('d-none'), 220);
+  document.body.style.overflow = '';
+}
+
+function handleModalOverlayClick(e) {
+  if (e.target.id === 'formula-modal-overlay') closeFormulaModal();
+}
+
+function setModalTab(tabName, btn) {
+  document.querySelectorAll('.formula-modal-tab-content').forEach(el => el.classList.add('d-none'));
+  document.getElementById('modal-tab-' + tabName).classList.remove('d-none');
+  document.querySelectorAll('.formula-modal-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+function navigateModal(dir) {
+  const next = currentFlatIdx + dir;
+  if (next < 0 || next >= flatIndex.length) return;
+  openFormulaModalByFlat(next);
+}
+
+function tryInSolver() {
+  const { f } = flatIndex[currentFlatIdx];
+  const problem = (f.example && f.example.problem)
+    ? f.example.problem.replace(/\\[()[\]]/g, '').replace(/\$\$/g,'').replace(/\$/g,'').trim()
+    : 'Solve a problem using the ' + f.name;
+  sessionStorage.setItem('solverPrefill', problem);
+  closeFormulaModal();
+  window.location.href = '/';
+}
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (document.getElementById('formula-modal-overlay').classList.contains('d-none')) return;
+  if (e.key === 'Escape') closeFormulaModal();
+  if (e.key === 'ArrowRight') navigateModal(1);
+  if (e.key === 'ArrowLeft') navigateModal(-1);
+});
+</script>
+{% endblock %}

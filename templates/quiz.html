@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %} — Quiz{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+
+    <!-- Hero -->
+    <div class="text-center mb-5">
+      <h1 class="fw-bold page-title">Practice Quiz</h1>
+      <p class="text-muted">Get a fresh calculus problem, work it out, and get instant feedback on your answer.</p>
+    </div>
+
+    <!-- Level Selector -->
+    <div class="quiz-config-card mb-4">
+      <div class="quiz-config-label">Choose your level</div>
+      <div class="level-toggle">
+        <button class="level-btn active" data-level="calc1" onclick="setLevel(this)">Calc 1</button>
+        <button class="level-btn" data-level="calc2" onclick="setLevel(this)">Calc 2</button>
+        <button class="level-btn" data-level="calc3" onclick="setLevel(this)">Calc 3</button>
+      </div>
+
+      <div class="quiz-config-label mt-3">Topic (optional)</div>
+      <input type="text"
+             id="quiz-topic"
+             class="topic-input"
+             placeholder="e.g. u-substitution, chain rule, series convergence..." />
+    </div>
+
+    <!-- Generate Button -->
+    <div class="d-grid mb-4">
+      <button id="generate-btn" class="btn btn-quiz-generate btn-lg" onclick="generateProblem()">
+        <span id="gen-label"><i class="bi bi-shuffle me-2"></i>Generate Problem</span>
+        <span id="gen-spinner" class="d-none">
+          <span class="spinner-border spinner-border-sm me-2"></span>Generating...
+        </span>
+      </button>
+    </div>
+
+    <!-- Problem Display -->
+    <div id="problem-card" class="problem-card d-none">
+      <div class="problem-card-header">
+        <i class="bi bi-patch-question-fill me-2"></i>Your Problem
+        <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="generateProblem()">
+          <i class="bi bi-arrow-clockwise me-1"></i>New Problem
+        </button>
+      </div>
+      <div id="problem-display" class="problem-display"></div>
+    </div>
+
+    <!-- Answer Section -->
+    <div id="answer-section" class="d-none">
+      <div class="answer-card">
+        <div class="answer-card-label">
+          <i class="bi bi-pencil-fill me-2"></i>Your Answer
+        </div>
+        <textarea id="student-answer"
+                  class="answer-textarea"
+                  placeholder="Type your answer here — show your work or just the final answer..."
+                  rows="5"></textarea>
+      </div>
+
+      <div class="d-grid mt-3">
+        <button id="grade-btn" class="btn btn-quiz-grade btn-lg" onclick="submitAnswer()">
+          <span id="grade-label"><i class="bi bi-check2-circle me-2"></i>Submit Answer</span>
+          <span id="grade-spinner" class="d-none">
+            <span class="spinner-border spinner-border-sm me-2"></span>Grading...
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Grade Result -->
+    <div id="grade-result" class="d-none mt-4">
+      <div id="grade-result-header" class="grade-result-header"></div>
+      <div id="grade-result-body" class="grade-result-body"></div>
+      <div class="d-grid mt-3">
+        <button class="btn btn-outline-secondary" onclick="generateProblem()">
+          <i class="bi bi-arrow-right-circle me-2"></i>Try Another Problem
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/quiz.js') }}"></script>
+{% endblock %}

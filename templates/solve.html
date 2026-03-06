@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %} — Solve{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+
+    <!-- Hero -->
+    <div class="text-center mb-5">
+      <h1 class="fw-bold page-title">Solve Any Calculus Problem</h1>
+      <p class="text-muted">Upload a photo, drop a PDF, or just type your problem.</p>
+    </div>
+
+    <!-- Mode Selector -->
+    <div class="mode-toggle-row mb-4">
+      <button id="btn-practice" class="mode-pill mode-pill-practice active" onclick="setMode('practice')">
+        <i class="bi bi-mortarboard-fill"></i>
+        <span class="mode-pill-name">Practice Mode</span>
+        <span class="mode-pill-desc">Step-by-step with formulas</span>
+      </button>
+      <button id="btn-rapid" class="mode-pill mode-pill-rapid" onclick="setMode('rapid')">
+        <i class="bi bi-lightning-fill"></i>
+        <span class="mode-pill-name">Rapid Mode</span>
+        <span class="mode-pill-desc">Answer only, fast</span>
+      </button>
+    </div>
+
+    <!-- Input Card -->
+    <div class="input-card mb-3">
+      <!-- Tab Switcher -->
+      <div class="input-tab-bar">
+        <button class="input-tab-btn active" id="tab-btn-upload" onclick="setInputTab('upload')">
+          <i class="bi bi-camera-fill"></i> Upload Photo / PDF
+        </button>
+        <button class="input-tab-btn" id="tab-btn-type" onclick="setInputTab('type')">
+          <i class="bi bi-keyboard-fill"></i> Type Problem
+        </button>
+      </div>
+
+      <!-- Upload Tab -->
+      <div id="tab-upload" class="input-tab-content">
+        <div id="drop-zone" class="drop-zone" onclick="document.getElementById('file-input').click()">
+          <input type="file" id="file-input" accept="image/*,.pdf" hidden onchange="handleFileSelect(this.files[0])" />
+          <div id="drop-content">
+            <i class="bi bi-cloud-arrow-up display-4 text-muted"></i>
+            <p class="mt-2 mb-0 fw-semibold">Drag &amp; drop your image or PDF here</p>
+            <p class="text-muted small mb-0">or click to browse &mdash; JPG, PNG, WebP, PDF up to 10MB</p>
+          </div>
+          <div id="file-preview" class="d-none text-center w-100">
+            <img id="preview-img" class="preview-img d-none" alt="Preview" />
+            <div id="preview-filename" class="mt-2 fw-semibold text-info"></div>
+            <p class="text-muted small mt-1 mb-0">Click to change file</p>
+          </div>
+        </div>
+        <div id="image-context-wrap" class="d-none mt-3">
+          <textarea id="image-context"
+                    class="problem-textarea"
+                    placeholder="Add context (optional) — e.g. 'focus on part b' or 'this is a related rates problem'..."
+                    rows="3"
+                    oninput="onTextInput()"></textarea>
+        </div>
+      </div>
+
+      <!-- Type Tab -->
+      <div id="tab-type" class="input-tab-content d-none">
+        <textarea id="problem-text"
+                  class="problem-textarea"
+                  placeholder="Type your calculus problem here...&#10;&#10;Examples:&#10;• Find the derivative of f(x) = x³ sin(x)&#10;• Evaluate ∫ x·eˣ dx&#10;• Find the limit as x→0 of (sin x)/x"
+                  rows="6"
+                  oninput="onTextInput()"></textarea>
+        <p class="text-muted small mt-2 mb-0">
+          <i class="bi bi-info-circle me-1"></i>
+          You can use LaTeX like <code>\( x^2 \)</code> or just plain math notation
+        </p>
+      </div>
+    </div>
+
+    <!-- Anon Usage Indicator (shown between file upload and submit button) -->
+    <div id="anon-usage-indicator" class="d-none mb-3"></div>
+
+    <!-- Submit Button -->
+    <div class="d-grid mb-5">
+      <button id="solve-btn" class="btn btn-solve btn-lg" onclick="submitSolve()" disabled>
+        <span id="btn-label"><i class="bi bi-send-fill me-2"></i>Solve Problem</span>
+        <span id="btn-spinner" class="d-none">
+          <span class="spinner-border spinner-border-sm me-2"></span>Solving...
+        </span>
+      </button>
+    </div>
+
+    <!-- Result -->
+    <div id="result-card" class="d-none result-outer">
+
+      <!-- Practice Result -->
+      <div id="result-practice" class="d-none">
+        <div class="result-header result-header-practice">
+          <div>
+            <i class="bi bi-mortarboard-fill me-2"></i>Practice Mode &mdash; Full Breakdown
+          </div>
+          <button class="copy-btn" onclick="copyResult('practice')" title="Copy solution">
+            <i class="bi bi-clipboard"></i>
+          </button>
+        </div>
+        <div id="result-practice-body" class="result-body practice-body"></div>
+      </div>
+
+      <!-- Rapid Result -->
+      <div id="result-rapid" class="d-none">
+        <div class="result-header result-header-rapid">
+          <div>
+            <i class="bi bi-lightning-fill me-2"></i>Rapid Mode &mdash; Answer
+          </div>
+          <button class="copy-btn" onclick="copyResult('rapid')" title="Copy answer">
+            <i class="bi bi-clipboard"></i>
+          </button>
+        </div>
+        <div id="result-rapid-body" class="result-body rapid-body"></div>
+      </div>
+
+      <!-- Error -->
+      <div id="result-error" class="d-none">
+        <div class="alert alert-danger mb-0">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i><span id="error-msg"></span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- History -->
+    <div id="history-section" class="history-section d-none">
+      <div class="history-header" onclick="toggleHistory()">
+        <span><i class="bi bi-clock-history me-2"></i>Recent Problems</span>
+        <div class="d-flex align-items-center gap-3">
+          <button class="btn btn-sm btn-link text-danger p-0" onclick="event.stopPropagation(); clearHistory()">
+            Clear all
+          </button>
+          <i class="bi bi-chevron-down" id="history-chevron"></i>
+        </div>
+      </div>
+      <div id="history-list" class="history-list"></div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% endblock %}
