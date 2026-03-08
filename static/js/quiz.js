@@ -1,5 +1,5 @@
 // ===== State =====
-let currentLevel   = 'calc1';
+let currentLevel = 'calc1';
 let currentProblem = null;
 
 // ===== Level Selection =====
@@ -11,37 +11,29 @@ function setLevel(btn) {
 
 // ===== Generate Problem =====
 async function generateProblem() {
-  const genBtn    = document.getElementById('generate-btn');
-  const genLabel  = document.getElementById('gen-label');
+  const genBtn = document.getElementById('generate-btn');
+  const genLabel = document.getElementById('gen-label');
   const genSpinner = document.getElementById('gen-spinner');
-  const topic     = document.getElementById('quiz-topic').value.trim();
+  const topic = document.getElementById('quiz-topic').value.trim();
 
   genBtn.disabled = true;
   genLabel.classList.add('d-none');
   genSpinner.classList.remove('d-none');
 
-  ['problem-card','answer-section','grade-result'].forEach(id =>
+  ['problem-card', 'answer-section', 'grade-result'].forEach(id =>
     document.getElementById(id)?.classList.add('d-none')
   );
   const answerTA = document.getElementById('student-answer');
   if (answerTA) answerTA.value = '';
 
   try {
-    const headers = typeof authHeaders === 'function'
-      ? { ...authHeaders(), 'Content-Type': 'application/json' }
-      : { 'Content-Type': 'application/json' };
-
-    const res  = await fetch('/quiz/generate', {
-      method: 'POST', headers,
+    const res = await fetch('/quiz/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ level: currentLevel, topic }),
     });
     const data = await res.json();
 
-    if (data.error === 'rate_limit') {
-      if (typeof showToast === 'function') showToast('Daily quiz limit reached. Come back tomorrow!', 'error');
-      else alert('Daily quiz limit reached.');
-      return;
-    }
     if (data.error) {
       if (typeof showToast === 'function') showToast('Error: ' + data.error, 'error');
       else alert('Error: ' + data.error);
@@ -50,7 +42,7 @@ async function generateProblem() {
 
     currentProblem = data.problem;
     showProblem(data.problem);
-  } catch {
+  } catch (err) {
     if (typeof showToast === 'function') showToast('Something went wrong. Please try again.', 'error');
     else alert('Something went wrong. Please try again.');
   } finally {
@@ -62,35 +54,32 @@ async function generateProblem() {
 
 function showProblem(problem) {
   const display = document.getElementById('problem-display');
-  display.textContent = problem;
-  document.getElementById('problem-card').classList.remove('d-none');
-  document.getElementById('answer-section').classList.remove('d-none');
-  document.getElementById('problem-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (display) display.textContent = problem;
+  document.getElementById('problem-card')?.classList.remove('d-none');
+  document.getElementById('answer-section')?.classList.remove('d-none');
+  document.getElementById('problem-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   if (window.MathJax) MathJax.typesetPromise([display]).catch(console.error);
 }
 
 // ===== Grade Answer =====
 async function submitAnswer() {
-  const answer = document.getElementById('student-answer').value.trim();
-  if (!answer) { document.getElementById('student-answer').focus(); return; }
+  const answer = document.getElementById('student-answer')?.value.trim();
+  if (!answer) { document.getElementById('student-answer')?.focus(); return; }
   if (!currentProblem) return;
 
-  const gradeBtn    = document.getElementById('grade-btn');
-  const gradeLabel  = document.getElementById('grade-label');
+  const gradeBtn = document.getElementById('grade-btn');
+  const gradeLabel = document.getElementById('grade-label');
   const gradeSpinner = document.getElementById('grade-spinner');
 
-  gradeBtn.disabled = true;
-  gradeLabel.classList.add('d-none');
-  gradeSpinner.classList.remove('d-none');
+  if (gradeBtn) gradeBtn.disabled = true;
+  gradeLabel?.classList.add('d-none');
+  gradeSpinner?.classList.remove('d-none');
   document.getElementById('grade-result')?.classList.add('d-none');
 
   try {
-    const headers = typeof authHeaders === 'function'
-      ? { ...authHeaders(), 'Content-Type': 'application/json' }
-      : { 'Content-Type': 'application/json' };
-
-    const res  = await fetch('/quiz/grade', {
-      method: 'POST', headers,
+    const res = await fetch('/quiz/grade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ problem: currentProblem, answer }),
     });
     const data = await res.json();
@@ -102,27 +91,27 @@ async function submitAnswer() {
     }
 
     showGradeResult(data.feedback);
-  } catch {
+  } catch (err) {
     if (typeof showToast === 'function') showToast('Something went wrong. Please try again.', 'error');
     else alert('Something went wrong. Please try again.');
   } finally {
-    gradeBtn.disabled = false;
-    gradeLabel.classList.remove('d-none');
-    gradeSpinner.classList.add('d-none');
+    if (gradeBtn) gradeBtn.disabled = false;
+    gradeLabel?.classList.remove('d-none');
+    gradeSpinner?.classList.add('d-none');
   }
 }
 
 function showGradeResult(feedback) {
-  const resultEl  = document.getElementById('grade-result');
-  const headerEl  = document.getElementById('grade-result-header');
-  const bodyEl    = document.getElementById('grade-result-body');
+  const resultEl = document.getElementById('grade-result');
+  const headerEl = document.getElementById('grade-result-header');
+  const bodyEl = document.getElementById('grade-result-body');
 
   const resultMatch = feedback.match(/\*\*Result:\*\*\s*([^\n]+)/i);
-  const resultText  = resultMatch ? resultMatch[1].trim() : '';
+  const resultText = resultMatch ? resultMatch[1].trim() : '';
   const lower = resultText.toLowerCase();
 
   let headerClass = 'grade-header-partial';
-  let headerIcon  = 'bi-dash-circle-fill';
+  let headerIcon = 'bi-dash-circle-fill';
   let headerLabel = 'Partially Correct';
 
   if (lower.includes('incorrect')) {
@@ -133,7 +122,7 @@ function showGradeResult(feedback) {
 
   headerEl.className = `grade-result-header ${headerClass}`;
   headerEl.innerHTML = `<i class="bi ${headerIcon} me-2"></i>${headerLabel}`;
-  bodyEl.innerHTML   = renderFeedback(feedback);
+  bodyEl.innerHTML = renderFeedback(feedback);
 
   resultEl.classList.remove('d-none');
   resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -164,9 +153,9 @@ function renderFeedback(text) {
 // ===== Shared Helpers =====
 function mathSafeEscape(text) {
   const maths = [];
-  text = text.replace(/\\\[[\s\S]*?\\\]/g, m => { maths.push(m); return `\x00M${maths.length-1}\x00`; });
-  text = text.replace(/\\\([\s\S]*?\\\)/g, m => { maths.push(m); return `\x00M${maths.length-1}\x00`; });
-  text = text.replace(/\$[^$\n]+\$/g,       m => { maths.push(m); return `\x00M${maths.length-1}\x00`; });
+  text = text.replace(/\\\[[\s\S]*?\\\]/g, m => { maths.push(m); return `\x00M${maths.length - 1}\x00`; });
+  text = text.replace(/\\\([\s\S]*?\\\)/g, m => { maths.push(m); return `\x00M${maths.length - 1}\x00`; });
+  text = text.replace(/\$[^$\n]+\$/g, m => { maths.push(m); return `\x00M${maths.length - 1}\x00`; });
   text = escapeHtml(text);
   text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   text = text.replace(/\x00M(\d+)\x00/g, (_, i) => maths[i]);
@@ -175,14 +164,14 @@ function mathSafeEscape(text) {
 
 function protectedMarked(text) {
   const maths = [];
-  text = text.replace(/\\\[[\s\S]*?\\\]/g, m => { maths.push(m); return `XMATH${maths.length-1}X`; });
-  text = text.replace(/\\\([\s\S]*?\\\)/g, m => { maths.push(m); return `XMATH${maths.length-1}X`; });
-  text = text.replace(/\$[^$\n]+\$/g,       m => { maths.push(m); return `XMATH${maths.length-1}X`; });
+  text = text.replace(/\\\[[\s\S]*?\\\]/g, m => { maths.push(m); return `XMATH${maths.length - 1}X`; });
+  text = text.replace(/\\\([\s\S]*?\\\)/g, m => { maths.push(m); return `XMATH${maths.length - 1}X`; });
+  text = text.replace(/\$[^$\n]+\$/g, m => { maths.push(m); return `XMATH${maths.length - 1}X`; });
   let html = typeof marked !== 'undefined' ? marked.parse(text) : `<pre>${escapeHtml(text)}</pre>`;
   html = html.replace(/XMATH(\d+)X/g, (_, i) => maths[i]);
   return html;
 }
 
 function escapeHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

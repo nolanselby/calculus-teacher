@@ -4,18 +4,16 @@ A calculus learning assistant that handles the math and the explanation. It uses
 
 ## Core Features
 
-- **Multimodal Solving**: Snap a photo, upload a PDF, or type it in.
+- **Multimodal Solving**: Snap a photo, upload an image, or type it in.
 - **Explain-First Solutions**: Moves beyond simple answers to show the "Big Idea" and step-by-step logic.
 - **Follow-up Chat**: If a step is confusing, just ask. The built-in chatbot knows the context of your specific problem.
 - **Interactive Quizzes**: Generate problems for Calc 1-3 and get graded feedback on your attempts.
 - **Formula Library**: A clean, categorized reference for when you just need to check a rule.
-- **Persistent History**: Saves your solves and quiz progress via Supabase.
 
 ## Tech
 
 - **Backend**: Flask (Python)
 - **AI**: Claude 3.5 Sonnet (Vision + Text)
-- **Database**: Supabase
 - **Frontend**: Vanilla JS / MathJax / Bootstrap
 
 ## Getting Started
@@ -23,7 +21,6 @@ A calculus learning assistant that handles the math and the explanation. It uses
 ### Prerequisites
 - Python 3.9+
 - Anthropic API Key
-- Supabase project (optional, but needed for history/rate limiting)
 
 ### Installation
 
@@ -39,7 +36,7 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Open `.env` and add your `ANTHROPIC_API_KEY`, `FLASK_SECRET_KEY`, and Supabase credentials.
+Open `.env` and add your `ANTHROPIC_API_KEY` and `FLASK_SECRET_KEY`.
 
 ### Run it
 ```bash

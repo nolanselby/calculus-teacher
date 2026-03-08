@@ -24,7 +24,8 @@
         <span class="hero-title-accent">Finally.</span>
       </h1>
       <p class="hero-subtitle">
-        Instant step-by-step solutions, AI-generated quizzes, and a complete formula library&nbsp;&mdash;<br class="d-none d-md-block">
+        Instant step-by-step solutions, AI-generated quizzes, and a complete formula library&nbsp;&mdash;<br
+          class="d-none d-md-block">
         built for students who mean business.
       </p>
       <div class="hero-trust">
@@ -36,11 +37,6 @@
         <div class="trust-stat">
           <span class="trust-num">&lt;3s</span>
           <span class="trust-label">Avg Response</span>
-        </div>
-        <div class="trust-divider"></div>
-        <div class="trust-stat">
-          <span class="trust-num">Free</span>
-          <span class="trust-label">To Get Started</span>
         </div>
       </div>
     </div>
@@ -87,21 +83,17 @@
           </div>
         </div>
         <div id="image-context-wrap" class="d-none mt-3">
-          <textarea id="image-context"
-                    class="problem-textarea"
-                    placeholder="Add context (optional) — e.g. 'focus on part b' or 'this is a related rates problem'..."
-                    rows="3"
-                    oninput="onTextInput()"></textarea>
+          <textarea id="image-context" class="problem-textarea"
+            placeholder="Add context (optional) — e.g. 'focus on part b' or 'this is a related rates problem'..."
+            rows="3" oninput="onTextInput()"></textarea>
         </div>
       </div>
 
       <!-- Type Tab -->
       <div id="tab-type" class="input-tab-content d-none">
-        <textarea id="problem-text"
-                  class="problem-textarea"
-                  placeholder="Type your calculus problem here...&#10;&#10;Examples:&#10;• Find the derivative of f(x) = x³ sin(x)&#10;• Evaluate ∫ x·eˣ dx&#10;• Find the limit as x→0 of (sin x)/x"
-                  rows="6"
-                  oninput="onTextInput()"></textarea>
+        <textarea id="problem-text" class="problem-textarea"
+          placeholder="Type your calculus problem here...&#10;&#10;Examples:&#10;• Find the derivative of f(x) = x³ sin(x)&#10;• Evaluate ∫ x·eˣ dx&#10;• Find the limit as x→0 of (sin x)/x"
+          rows="6" oninput="onTextInput()"></textarea>
         <p class="text-muted small mt-2 mb-0">
           <i class="bi bi-info-circle me-1"></i>
           You can use LaTeX like <code>\( x^2 \)</code> or just plain math notation
@@ -109,8 +101,7 @@
       </div>
     </div>
 
-    <!-- Anon Usage Indicator -->
-    <div id="anon-usage-indicator" class="d-none mb-3"></div>
+
 
     <!-- Submit Button -->
     <div class="d-grid mb-5">
@@ -165,13 +156,14 @@
         </div>
         <div id="chat-messages" class="chat-messages">
           <div class="chat-bubble chat-bubble-assistant">
-            <div class="chat-bubble-content">Got questions about the solution? Ask me anything — I'm here to help! 😊</div>
+            <div class="chat-bubble-content">Got questions about the solution? Ask me anything — I'm here to help! 😊
+            </div>
           </div>
         </div>
         <div class="chat-input-row">
           <input type="text" id="chat-input" class="chat-input"
-                 placeholder="e.g. Why did we use that formula? Can you re-explain step 2?"
-                 onkeydown="if(event.key==='Enter')sendChatMessage()" />
+            placeholder="e.g. Why did we use that formula? Can you re-explain step 2?"
+            onkeydown="if(event.key==='Enter')sendChatMessage()" />
           <button id="chat-send-btn" class="chat-send-btn" onclick="sendChatMessage()">
             <i class="bi bi-send-fill"></i>
           </button>
@@ -187,37 +179,28 @@
           <i class="bi bi-camera-fill"></i>
         </div>
         <h3 class="feature-title">Solve Anything</h3>
-        <p class="feature-desc">Upload a photo of your homework, drop a PDF, or type any problem. Claude reads it all.</p>
+        <p class="feature-desc">Upload a photo of your homework, drop a PDF, or type any problem. Claude reads it all.
+        </p>
       </div>
       <div class="feature-card">
         <div class="feature-icon feature-icon-purple">
           <i class="bi bi-mortarboard-fill"></i>
         </div>
         <h3 class="feature-title">Learn the Why</h3>
-        <p class="feature-desc">Practice Mode breaks every problem into labeled steps with the formulas that power them.</p>
+        <p class="feature-desc">Practice Mode breaks every problem into labeled steps with the formulas that power them.
+        </p>
       </div>
       <div class="feature-card">
         <div class="feature-icon feature-icon-green">
           <i class="bi bi-patch-question-fill"></i>
         </div>
         <h3 class="feature-title">Quiz Yourself</h3>
-        <p class="feature-desc">AI generates fresh problems at your level. Submit your work and get graded instantly.</p>
+        <p class="feature-desc">AI generates fresh problems at your level. Submit your work and get graded instantly.
+        </p>
       </div>
     </div>
 
-    <!-- History -->
-    <div id="history-section" class="history-section d-none mt-5">
-      <div class="history-header" onclick="toggleHistory()">
-        <span><i class="bi bi-clock-history me-2"></i>Recent Problems</span>
-        <div class="d-flex align-items-center gap-3">
-          <button class="btn btn-sm btn-link text-danger p-0" onclick="event.stopPropagation(); clearHistory()">
-            Clear all
-          </button>
-          <i class="bi bi-chevron-down" id="history-chevron"></i>
-        </div>
-      </div>
-      <div id="history-list" class="history-list"></div>
-    </div>
+
 
   </div>
 </div>

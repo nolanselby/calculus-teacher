@@ -2,30 +2,29 @@
 let currentMode = 'practice';
 let selectedFile = null;
 let currentInputTab = 'upload';
-let historyOpen = false;
 let chatHistory = [];  // conversation context for follow-up chat
 let lastProblemText = '';  // the original problem text for chat seeding
 
 // ===== Mode Toggle =====
 function setMode(mode) {
   currentMode = mode;
-  document.getElementById('btn-practice').classList.toggle('active', mode === 'practice');
-  document.getElementById('btn-rapid').classList.toggle('active', mode === 'rapid');
+  document.getElementById('btn-practice')?.classList.toggle('active', mode === 'practice');
+  document.getElementById('btn-rapid')?.classList.toggle('active', mode === 'rapid');
 }
 
 // ===== Input Tab =====
 function setInputTab(tab) {
   currentInputTab = tab;
 
-  document.getElementById('tab-btn-upload').classList.toggle('active', tab === 'upload');
-  document.getElementById('tab-btn-type').classList.toggle('active', tab === 'type');
-  document.getElementById('tab-upload').classList.toggle('d-none', tab !== 'upload');
-  document.getElementById('tab-type').classList.toggle('d-none', tab !== 'type');
+  document.getElementById('tab-btn-upload')?.classList.toggle('active', tab === 'upload');
+  document.getElementById('tab-btn-type')?.classList.toggle('active', tab === 'type');
+  document.getElementById('tab-upload')?.classList.toggle('d-none', tab !== 'upload');
+  document.getElementById('tab-type')?.classList.toggle('d-none', tab !== 'type');
 
   if (tab !== 'upload') {
-    document.getElementById('image-context-wrap').classList.add('d-none');
+    document.getElementById('image-context-wrap')?.classList.add('d-none');
   } else if (selectedFile) {
-    document.getElementById('image-context-wrap').classList.remove('d-none');
+    document.getElementById('image-context-wrap')?.classList.remove('d-none');
   }
 
   updateSolveBtn();
@@ -36,21 +35,24 @@ function handleFileSelect(file) {
   if (!file) return;
   selectedFile = file;
 
-  document.getElementById('drop-content').classList.add('d-none');
-  document.getElementById('file-preview').classList.remove('d-none');
-  document.getElementById('preview-filename').textContent = file.name;
-  document.getElementById('image-context-wrap').classList.remove('d-none');
+  document.getElementById('drop-content')?.classList.add('d-none');
+  document.getElementById('file-preview')?.classList.remove('d-none');
+  const filenameEl = document.getElementById('preview-filename');
+  if (filenameEl) filenameEl.textContent = file.name;
+  document.getElementById('image-context-wrap')?.classList.remove('d-none');
 
   if (file.type.startsWith('image/')) {
     const reader = new FileReader();
     reader.onload = e => {
       const img = document.getElementById('preview-img');
-      img.src = e.target.result;
-      img.classList.remove('d-none');
+      if (img) {
+        img.src = e.target.result;
+        img.classList.remove('d-none');
+      }
     };
     reader.readAsDataURL(file);
   } else {
-    document.getElementById('preview-img').classList.add('d-none');
+    document.getElementById('preview-img')?.classList.add('d-none');
   }
 
   updateSolveBtn();
@@ -63,19 +65,26 @@ function updateSolveBtn() {
   const textProblem = document.getElementById('problem-text')?.value.trim() || '';
   const hasInput = (currentInputTab === 'upload' && selectedFile) ||
     (currentInputTab === 'type' && textProblem.length > 0);
-  document.getElementById('solve-btn').disabled = !hasInput;
+  const solveBtn = document.getElementById('solve-btn');
+  if (solveBtn) solveBtn.disabled = !hasInput;
 }
 
 // ===== Drag and Drop =====
 const dropZone = document.getElementById('drop-zone');
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('dragover');
-  const file = e.dataTransfer.files[0];
-  if (file) { document.getElementById('file-input').files = e.dataTransfer.files; handleFileSelect(file); }
-});
+if (dropZone) {
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      const fileInput = document.getElementById('file-input');
+      if (fileInput) fileInput.files = e.dataTransfer.files;
+      handleFileSelect(file);
+    }
+  });
+}
 
 // ===== Submit =====
 async function submitSolve() {
@@ -90,10 +99,11 @@ async function submitSolve() {
   const btnLabel = document.getElementById('btn-label');
   const btnSpinner = document.getElementById('btn-spinner');
 
-  btn.disabled = true;
-  btnLabel.classList.add('d-none');
-  btnSpinner.classList.remove('d-none');
+  if (btn) btn.disabled = true;
+  btnLabel?.classList.add('d-none');
+  btnSpinner?.classList.remove('d-none');
   hideResult();
+
   lastProblemText = textProblem || (selectedFile ? selectedFile.name : '');
 
   const formData = new FormData();
@@ -102,22 +112,8 @@ async function submitSolve() {
   formData.append('mode', currentMode);
 
   try {
-    const headers = typeof authHeaders === 'function' ? authHeaders() : {};
-    const res = await fetch('/solve', { method: 'POST', headers, body: formData });
+    const res = await fetch('/solve', { method: 'POST', body: formData });
     const data = await res.json();
-
-    if (data.error === 'auth_required') {
-      // Show gate modal
-      if (typeof openAuthModal === 'function') {
-        openAuthModal('signup', data.message || 'Create a free account to keep solving');
-      }
-      return;
-    }
-
-    if (data.error === 'rate_limit') {
-      showError('Daily limit reached. You\'ve used all your solves for today — come back tomorrow!');
-      return;
-    }
 
     if (data.error) {
       showError(data.error);
@@ -125,67 +121,33 @@ async function submitSolve() {
     }
 
     showResult(data.solution, data.mode);
-    updateAnonUsageIndicator();
 
-    // Persist: if logged in, reload history; else use localStorage
-    if (typeof getCurrentUser === 'function' && getCurrentUser()) {
-      // server already saved it
-    } else {
-      saveToLocalHistory({
-        mode: data.mode,
-        problem: textProblem || (selectedFile ? selectedFile.name : 'Image upload'),
-        solution: data.solution,
-        imageUrl: selectedFile && currentInputTab === 'upload'
-          ? document.getElementById('preview-img')?.src || null : null,
-      });
-    }
-
-  } catch {
+  } catch (err) {
     showError('Something went wrong. Please try again.');
   } finally {
-    btn.disabled = false;
-    btnLabel.classList.remove('d-none');
-    btnSpinner.classList.add('d-none');
+    if (btn) btn.disabled = false;
+    btnLabel?.classList.remove('d-none');
+    btnSpinner?.classList.add('d-none');
     updateSolveBtn();
   }
-}
-
-// ===== Anon usage indicator =====
-async function updateAnonUsageIndicator() {
-  if (typeof getCurrentUser === 'function' && getCurrentUser()) {
-    document.getElementById('anon-usage-indicator')?.classList.add('d-none');
-    return;
-  }
-  try {
-    const res = await fetch('/api/usage/anon');
-    const data = await res.json();
-    const el = document.getElementById('anon-usage-indicator');
-    if (!el) return;
-    const used = data.used ?? 0;
-    const limit = data.limit ?? 2;
-    const remaining = limit - used;
-    if (remaining <= 0) {
-      el.innerHTML = '<i class="bi bi-lock-fill me-1"></i>Free uploads used — <a href="#" onclick="openAuthModal(\'signup\')">create a free account</a> to keep going.';
-      el.className = 'anon-usage-indicator anon-usage-locked';
-    } else {
-      el.innerHTML = `<i class="bi bi-gift-fill me-1"></i>${remaining} free file upload${remaining !== 1 ? 's' : ''} remaining`;
-      el.className = 'anon-usage-indicator anon-usage-free';
-    }
-    el.classList.remove('d-none');
-  } catch { /* ignore */ }
 }
 
 // ===== Result Display =====
 function showResult(solution, mode) {
   const resultCard = document.getElementById('result-card');
-  document.getElementById('result-practice').classList.add('d-none');
-  document.getElementById('result-rapid').classList.add('d-none');
-  document.getElementById('result-error').classList.add('d-none');
+  if (!resultCard) return;
+
+  document.getElementById('result-practice')?.classList.add('d-none');
+  document.getElementById('result-rapid')?.classList.add('d-none');
+  document.getElementById('result-error')?.classList.add('d-none');
   resultCard.classList.remove('d-none');
 
   if (mode === 'practice') {
-    document.getElementById('result-practice').classList.remove('d-none');
-    document.getElementById('result-practice-body').innerHTML = renderPractice(solution);
+    const practiceEl = document.getElementById('result-practice');
+    const bodyEl = document.getElementById('result-practice-body');
+    if (practiceEl) practiceEl.classList.remove('d-none');
+    if (bodyEl) bodyEl.innerHTML = renderPractice(solution);
+
     // Show chat and seed conversation with the problem + solution
     const chatSection = document.getElementById('chat-section');
     if (chatSection) {
@@ -195,16 +157,20 @@ function showResult(solution, mode) {
         { role: 'assistant', content: solution },
       ];
       // Reset chat messages to just the welcome
-      document.getElementById('chat-messages').innerHTML =
-        `<div class="chat-bubble chat-bubble-assistant">
-           <div class="chat-bubble-content">Got questions about the solution? Ask me anything — I'm here to help! 😊</div>
-         </div>`;
-      document.getElementById('chat-input').value = '';
+      const messagesEl = document.getElementById('chat-messages');
+      if (messagesEl) {
+        messagesEl.innerHTML =
+          `<div class="chat-bubble chat-bubble-assistant">
+             <div class="chat-bubble-content">Got questions about the solution? Ask me anything — I'm here to help! 😊</div>
+           </div>`;
+      }
+      const chatInput = document.getElementById('chat-input');
+      if (chatInput) chatInput.value = '';
     }
   } else {
-    document.getElementById('result-rapid').classList.remove('d-none');
-    document.getElementById('result-rapid-body').innerHTML =
-      `<div class="rapid-answer">${protectedMarked(solution.trim())}</div>`;
+    document.getElementById('result-rapid')?.classList.remove('d-none');
+    const bodyEl = document.getElementById('result-rapid-body');
+    if (bodyEl) bodyEl.innerHTML = `<div class="rapid-answer">${protectedMarked(solution.trim())}</div>`;
     document.getElementById('chat-section')?.classList.add('d-none');
   }
 
@@ -214,16 +180,17 @@ function showResult(solution, mode) {
 
 function showError(msg) {
   const resultCard = document.getElementById('result-card');
-  document.getElementById('error-msg').textContent = msg;
-  resultCard.classList.remove('d-none');
-  document.getElementById('result-error').classList.remove('d-none');
-  resultCard.scrollIntoView({ behavior: 'smooth' });
+  const errorMsgEl = document.getElementById('error-msg');
+  if (errorMsgEl) errorMsgEl.textContent = msg;
+  resultCard?.classList.remove('d-none');
+  document.getElementById('result-error')?.classList.remove('d-none');
+  resultCard?.scrollIntoView({ behavior: 'smooth' });
 }
 
 function hideResult() {
-  document.getElementById('result-card').classList.add('d-none');
+  document.getElementById('result-card')?.classList.add('d-none');
   ['result-practice', 'result-rapid', 'result-error'].forEach(id =>
-    document.getElementById(id).classList.add('d-none')
+    document.getElementById(id)?.classList.add('d-none')
   );
   // Reset chat
   document.getElementById('chat-section')?.classList.add('d-none');
@@ -238,7 +205,7 @@ function renderPractice(text) {
 
   let html = '';
 
-  // ── Big Idea (new: plain-English context before the math) ──
+  // ── Big Idea ──
   const bigIdeaMatch = text.match(/\*\*Big Idea:\*\*\s*([\s\S]*?)(?=\*\*Problem Type:|\*\*Formulas Used:|\*\*Step|$)/);
   if (bigIdeaMatch) {
     html += `<div class="sol-section sol-big-idea">
@@ -298,7 +265,6 @@ function renderPractice(text) {
     </div>`;
   }
 
-  // ── Why It Works (new: real-world insight after the answer) ──
   const whyMatch = text.match(/\*\*Why [Ii]t Works:\*\*\s*([\s\S]*?)(?=---|$)/);
   if (whyMatch) {
     html += `<div class="sol-section sol-why-works">
@@ -356,19 +322,20 @@ function copyResult(mode) {
 // ===== Chat Follow-Up =====
 async function sendChatMessage() {
   const input = document.getElementById('chat-input');
-  const message = input.value.trim();
+  const message = input?.value.trim();
   if (!message) return;
 
   const messagesEl = document.getElementById('chat-messages');
   const sendBtn = document.getElementById('chat-send-btn');
+  if (!messagesEl) return;
 
   // Add user bubble
   messagesEl.insertAdjacentHTML('beforeend',
     `<div class="chat-bubble chat-bubble-user">
        <div class="chat-bubble-content">${escapeHtml(message)}</div>
      </div>`);
-  input.value = '';
-  sendBtn.disabled = true;
+  if (input) input.value = '';
+  if (sendBtn) sendBtn.disabled = true;
   messagesEl.scrollTop = messagesEl.scrollHeight;
 
   // Add typing indicator
@@ -380,12 +347,9 @@ async function sendChatMessage() {
   messagesEl.scrollTop = messagesEl.scrollHeight;
 
   try {
-    const headers = typeof authHeaders === 'function'
-      ? { ...authHeaders(), 'Content-Type': 'application/json' }
-      : { 'Content-Type': 'application/json' };
     const res = await fetch('/chat', {
       method: 'POST',
-      headers,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, history: chatHistory }),
     });
     const data = await res.json();
@@ -412,90 +376,17 @@ async function sendChatMessage() {
       // Typeset math
       if (window.MathJax) MathJax.typesetPromise([replyEl]).catch(console.error);
     }
-  } catch {
+  } catch (err) {
     document.getElementById(typingId)?.remove();
     messagesEl.insertAdjacentHTML('beforeend',
       `<div class="chat-bubble chat-bubble-assistant chat-error">
          <div class="chat-bubble-content">Something went wrong. Please try again.</div>
        </div>`);
   } finally {
-    sendBtn.disabled = false;
-    input.focus();
+    if (sendBtn) sendBtn.disabled = false;
+    input?.focus();
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
-}
-
-// ===== Local History (anon users) =====
-function saveToLocalHistory(entry) {
-  const history = getLocalHistory();
-  history.unshift({
-    id: Date.now(),
-    timestamp: new Date().toISOString(),
-    mode: entry.mode,
-    problem: entry.problem || 'Image upload',
-    solution: entry.solution,
-    imageUrl: entry.imageUrl || null,
-  });
-  try { localStorage.setItem('calc_history', JSON.stringify(history.slice(0, 20))); } catch { }
-  renderLocalHistory();
-}
-
-function getLocalHistory() {
-  try { return JSON.parse(localStorage.getItem('calc_history') || '[]'); } catch { return []; }
-}
-
-function renderLocalHistory() {
-  const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
-  // Only show local history for signed-out users
-  if (user) { document.getElementById('history-section')?.classList.add('d-none'); return; }
-
-  const history = getLocalHistory();
-  const section = document.getElementById('history-section');
-  const list = document.getElementById('history-list');
-
-  if (!history.length) { section?.classList.add('d-none'); return; }
-  section?.classList.remove('d-none');
-
-  list.innerHTML = history.map((item, idx) => {
-    const timeAgo = formatTimeAgo(new Date(item.timestamp));
-    const preview = (item.problem || '').slice(0, 80);
-    const badgeCls = item.mode === 'practice' ? 'badge-practice' : 'badge-rapid';
-    return `
-      <div class="history-item" onclick="toggleHistoryItem(${idx})">
-        <div class="history-item-meta">
-          <span class="history-badge ${badgeCls}">${item.mode === 'practice' ? 'Practice' : 'Rapid'}</span>
-          <span class="history-time">${timeAgo}</span>
-        </div>
-        <div class="history-problem">${escapeHtml(preview)}${item.problem.length > 80 ? '…' : ''}</div>
-        <div class="history-expanded d-none" id="hist-expanded-${idx}">
-          ${escapeHtml(item.solution)}
-        </div>
-      </div>`;
-  }).join('');
-}
-
-function toggleHistoryItem(idx) {
-  document.getElementById(`hist-expanded-${idx}`)?.classList.toggle('d-none');
-}
-
-function toggleHistory() {
-  historyOpen = !historyOpen;
-  document.getElementById('history-list')?.classList.toggle('open', historyOpen);
-  const chevron = document.getElementById('history-chevron');
-  if (chevron) chevron.className = historyOpen ? 'bi bi-chevron-up' : 'bi bi-chevron-down';
-}
-
-function clearHistory() {
-  try { localStorage.removeItem('calc_history'); } catch { }
-  document.getElementById('history-section')?.classList.add('d-none');
-}
-
-function formatTimeAgo(date) {
-  const s = Math.floor((Date.now() - date) / 1000);
-  if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
 }
 
 // ===== Init =====
@@ -513,8 +404,3 @@ function formatTimeAgo(date) {
     }
   }
 })();
-
-// Load anon usage indicator
-updateAnonUsageIndicator();
-// Load local history for anonymous users
-renderLocalHistory();
