@@ -2,16 +2,50 @@
 {% block title %} — Solve{% endblock %}
 
 {% block content %}
+
+<!-- Animated Background Orbs -->
+<div class="hero-bg" aria-hidden="true">
+  <div class="hero-orb hero-orb-1"></div>
+  <div class="hero-orb hero-orb-2"></div>
+  <div class="hero-orb hero-orb-3"></div>
+</div>
+
 <div class="row justify-content-center">
   <div class="col-lg-8">
 
-    <!-- Hero -->
-    <div class="text-center mb-5">
-      <h1 class="fw-bold page-title">Solve Any Calculus Problem</h1>
-      <p class="text-muted">Upload a photo, drop a PDF, or just type your problem.</p>
+    <!-- ── Hero ─────────────────────────────────────────────────────────── -->
+    <div class="hero-section text-center">
+      <div class="hero-badge">
+        <span class="hero-badge-pulse"></span>
+        Powered by Claude AI
+      </div>
+      <h1 class="hero-title">
+        Master Calculus.<br>
+        <span class="hero-title-accent">Finally.</span>
+      </h1>
+      <p class="hero-subtitle">
+        Instant step-by-step solutions, AI-generated quizzes, and a complete formula library&nbsp;&mdash;<br class="d-none d-md-block">
+        built for students who mean business.
+      </p>
+      <div class="hero-trust">
+        <div class="trust-stat">
+          <span class="trust-num">10k+</span>
+          <span class="trust-label">Problems Solved</span>
+        </div>
+        <div class="trust-divider"></div>
+        <div class="trust-stat">
+          <span class="trust-num">&lt;3s</span>
+          <span class="trust-label">Avg Response</span>
+        </div>
+        <div class="trust-divider"></div>
+        <div class="trust-stat">
+          <span class="trust-num">Free</span>
+          <span class="trust-label">To Get Started</span>
+        </div>
+      </div>
     </div>
 
-    <!-- Mode Selector -->
+    <!-- ── Mode Selector ─────────────────────────────────────────────────── -->
     <div class="mode-toggle-row mb-4">
       <button id="btn-practice" class="mode-pill mode-pill-practice active" onclick="setMode('practice')">
         <i class="bi bi-mortarboard-fill"></i>
@@ -25,7 +59,7 @@
       </button>
     </div>
 
-    <!-- Input Card -->
+    <!-- ── Input Card ─────────────────────────────────────────────────────── -->
     <div class="input-card mb-3">
       <!-- Tab Switcher -->
       <div class="input-tab-bar">
@@ -75,7 +109,7 @@
       </div>
     </div>
 
-    <!-- Anon Usage Indicator (shown between file upload and submit button) -->
+    <!-- Anon Usage Indicator -->
     <div id="anon-usage-indicator" class="d-none mb-3"></div>
 
     <!-- Submit Button -->
@@ -124,10 +158,55 @@
         </div>
       </div>
 
+      <!-- Chat Follow-Up (practice mode only) -->
+      <div id="chat-section" class="d-none">
+        <div class="chat-header">
+          <div><i class="bi bi-chat-dots-fill me-2"></i>Ask a Follow-Up Question</div>
+        </div>
+        <div id="chat-messages" class="chat-messages">
+          <div class="chat-bubble chat-bubble-assistant">
+            <div class="chat-bubble-content">Got questions about the solution? Ask me anything — I'm here to help! 😊</div>
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" id="chat-input" class="chat-input"
+                 placeholder="e.g. Why did we use that formula? Can you re-explain step 2?"
+                 onkeydown="if(event.key==='Enter')sendChatMessage()" />
+          <button id="chat-send-btn" class="chat-send-btn" onclick="sendChatMessage()">
+            <i class="bi bi-send-fill"></i>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Feature Highlights ─────────────────────────────────────────────── -->
+    <div class="features-grid mt-5">
+      <div class="feature-card">
+        <div class="feature-icon feature-icon-blue">
+          <i class="bi bi-camera-fill"></i>
+        </div>
+        <h3 class="feature-title">Solve Anything</h3>
+        <p class="feature-desc">Upload a photo of your homework, drop a PDF, or type any problem. Claude reads it all.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon feature-icon-purple">
+          <i class="bi bi-mortarboard-fill"></i>
+        </div>
+        <h3 class="feature-title">Learn the Why</h3>
+        <p class="feature-desc">Practice Mode breaks every problem into labeled steps with the formulas that power them.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon feature-icon-green">
+          <i class="bi bi-patch-question-fill"></i>
+        </div>
+        <h3 class="feature-title">Quiz Yourself</h3>
+        <p class="feature-desc">AI generates fresh problems at your level. Submit your work and get graded instantly.</p>
+      </div>
     </div>
 
     <!-- History -->
-    <div id="history-section" class="history-section d-none">
+    <div id="history-section" class="history-section d-none mt-5">
       <div class="history-header" onclick="toggleHistory()">
         <span><i class="bi bi-clock-history me-2"></i>Recent Problems</span>
         <div class="d-flex align-items-center gap-3">

@@ -28,11 +28,12 @@ Flask app with three pages and five API routes. All Claude calls are in `app.py`
 - `POST /solve` — accepts `multipart/form-data` with optional `file` (image/PDF) and/or `text_problem`; returns `{solution, mode}`
 - `POST /quiz/generate` — accepts `{level, topic}` JSON; returns `{problem}`
 - `POST /quiz/grade` — accepts `{problem, answer}` JSON; returns `{feedback}`
+- `POST /chat` — accepts `{message, history}` JSON; returns `{reply}` — follow-up chatbot for practice mode solutions
 
-**Claude model:** `claude-sonnet-4-6` for all three API endpoints. PDFs are converted to PNG via PyMuPDF before sending to Claude vision.
+**Claude model:** `claude-sonnet-4-6` for all API endpoints. PDFs are converted to PNG via PyMuPDF before sending to Claude vision.
 
 **Frontend JS split:**
-- `static/js/app.js` — solve page only (mode toggle, file/text input, result rendering, localStorage history)
+- `static/js/app.js` — solve page only (mode toggle, file/text input, result rendering, localStorage history, follow-up chatbot)
 - `static/js/quiz.js` — quiz page only (level selection, problem generation, answer grading)
 - Both files duplicate `mathSafeEscape()`, `protectedMarked()`, and `escapeHtml()` helpers — intentional since they're separate pages with no shared JS bundle.
 
@@ -53,3 +54,4 @@ Prompts in `prompts.py` enforce strict output formats that the JS parsers depend
 - `PRACTICE_SYSTEM` → parsed by `renderPractice()`
 - `QUIZ_GRADE_SYSTEM` → parsed by `renderFeedback()` / `showGradeResult()`
 - `QUIZ_GENERATE_SYSTEM` / `RAPID_SYSTEM` → output rendered as-is (no structured parsing)
+- `CHAT_SYSTEM` → follow-up chatbot for practice mode; responses rendered with `protectedMarked()` in chat bubbles

@@ -3,6 +3,8 @@ let currentMode = 'practice';
 let selectedFile = null;
 let currentInputTab = 'upload';
 let historyOpen = false;
+let chatHistory = [];  // conversation context for follow-up chat
+let lastProblemText = '';  // the original problem text for chat seeding
 
 // ===== Mode Toggle =====
 function setMode(mode) {
@@ -60,7 +62,7 @@ function onTextInput() { updateSolveBtn(); }
 function updateSolveBtn() {
   const textProblem = document.getElementById('problem-text')?.value.trim() || '';
   const hasInput = (currentInputTab === 'upload' && selectedFile) ||
-                   (currentInputTab === 'type' && textProblem.length > 0);
+    (currentInputTab === 'type' && textProblem.length > 0);
   document.getElementById('solve-btn').disabled = !hasInput;
 }
 
@@ -84,14 +86,15 @@ async function submitSolve() {
   if (currentInputTab === 'upload' && !selectedFile) return;
   if (currentInputTab === 'type' && !textProblem) return;
 
-  const btn       = document.getElementById('solve-btn');
-  const btnLabel  = document.getElementById('btn-label');
+  const btn = document.getElementById('solve-btn');
+  const btnLabel = document.getElementById('btn-label');
   const btnSpinner = document.getElementById('btn-spinner');
 
   btn.disabled = true;
   btnLabel.classList.add('d-none');
   btnSpinner.classList.remove('d-none');
   hideResult();
+  lastProblemText = textProblem || (selectedFile ? selectedFile.name : '');
 
   const formData = new FormData();
   if (selectedFile && currentInputTab === 'upload') formData.append('file', selectedFile);
@@ -100,7 +103,7 @@ async function submitSolve() {
 
   try {
     const headers = typeof authHeaders === 'function' ? authHeaders() : {};
-    const res  = await fetch('/solve', { method: 'POST', headers, body: formData });
+    const res = await fetch('/solve', { method: 'POST', headers, body: formData });
     const data = await res.json();
 
     if (data.error === 'auth_required') {
@@ -154,11 +157,11 @@ async function updateAnonUsageIndicator() {
     return;
   }
   try {
-    const res  = await fetch('/api/usage/anon');
+    const res = await fetch('/api/usage/anon');
     const data = await res.json();
-    const el   = document.getElementById('anon-usage-indicator');
+    const el = document.getElementById('anon-usage-indicator');
     if (!el) return;
-    const used  = data.used  ?? 0;
+    const used = data.used ?? 0;
     const limit = data.limit ?? 2;
     const remaining = limit - used;
     if (remaining <= 0) {
@@ -183,10 +186,26 @@ function showResult(solution, mode) {
   if (mode === 'practice') {
     document.getElementById('result-practice').classList.remove('d-none');
     document.getElementById('result-practice-body').innerHTML = renderPractice(solution);
+    // Show chat and seed conversation with the problem + solution
+    const chatSection = document.getElementById('chat-section');
+    if (chatSection) {
+      chatSection.classList.remove('d-none');
+      chatHistory = [
+        { role: 'user', content: lastProblemText || 'Solve this calculus problem.' },
+        { role: 'assistant', content: solution },
+      ];
+      // Reset chat messages to just the welcome
+      document.getElementById('chat-messages').innerHTML =
+        `<div class="chat-bubble chat-bubble-assistant">
+           <div class="chat-bubble-content">Got questions about the solution? Ask me anything — I'm here to help! 😊</div>
+         </div>`;
+      document.getElementById('chat-input').value = '';
+    }
   } else {
     document.getElementById('result-rapid').classList.remove('d-none');
     document.getElementById('result-rapid-body').innerHTML =
       `<div class="rapid-answer">${protectedMarked(solution.trim())}</div>`;
+    document.getElementById('chat-section')?.classList.add('d-none');
   }
 
   resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -203,18 +222,30 @@ function showError(msg) {
 
 function hideResult() {
   document.getElementById('result-card').classList.add('d-none');
-  ['result-practice','result-rapid','result-error'].forEach(id =>
+  ['result-practice', 'result-rapid', 'result-error'].forEach(id =>
     document.getElementById(id).classList.add('d-none')
   );
+  // Reset chat
+  document.getElementById('chat-section')?.classList.add('d-none');
+  chatHistory = [];
 }
 
 // ===== Practice Result Parser =====
 function renderPractice(text) {
   text = text.replace(/^---\s*$/gm, '').trim();
-  const hasStructure = text.includes('**Problem Type:**') || text.includes('**Step');
+  const hasStructure = text.includes('**Problem Type:**') || text.includes('**Step') || text.includes('**Big Idea:**');
   if (!hasStructure) return `<div class="sol-fallback">${protectedMarked(text)}</div>`;
 
   let html = '';
+
+  // ── Big Idea (new: plain-English context before the math) ──
+  const bigIdeaMatch = text.match(/\*\*Big Idea:\*\*\s*([\s\S]*?)(?=\*\*Problem Type:|\*\*Formulas Used:|\*\*Step|$)/);
+  if (bigIdeaMatch) {
+    html += `<div class="sol-section sol-big-idea">
+      <div class="sol-section-label sol-big-idea-label"><i class="bi bi-lightbulb-fill"></i> Big Idea</div>
+      <div class="sol-big-idea-content">${mathSafeEscape(bigIdeaMatch[1].trim())}</div>
+    </div>`;
+  }
 
   const typeMatch = text.match(/\*\*Problem Type:\*\*\s*([^\n]+)/);
   if (typeMatch) {
@@ -228,7 +259,7 @@ function renderPractice(text) {
   if (formulasMatch) {
     const lines = formulasMatch[1].trim().split('\n').filter(l => l.trim().match(/^[-•*]/));
     if (lines.length) {
-      const items = lines.map(l => `<li>${mathSafeEscape(l.replace(/^[-•*]\s*/,'').trim())}</li>`).join('');
+      const items = lines.map(l => `<li>${mathSafeEscape(l.replace(/^[-•*]\s*/, '').trim())}</li>`).join('');
       html += `<div class="sol-section">
         <div class="sol-section-label sol-formulas-label"><i class="bi bi-collection-fill"></i> Formulas Used</div>
         <ul class="sol-formula-list">${items}</ul>
@@ -249,7 +280,7 @@ function renderPractice(text) {
         stepsHtml += `<div class="sol-step">
           <div class="sol-step-header">
             <span class="sol-step-num">${h[1]}</span>
-            <span class="sol-step-title">${escapeHtml(h[2].trim().replace(/\*\*/g,''))}</span>
+            <span class="sol-step-title">${escapeHtml(h[2].trim().replace(/\*\*/g, ''))}</span>
           </div>
           <div class="sol-step-body">${renderStepBody(bodyText)}</div>
         </div>`;
@@ -259,11 +290,20 @@ function renderPractice(text) {
     }
   }
 
-  const answerMatch = text.match(/\*\*Final Answer:\*\*\s*([\s\S]*?)(?=---|$)/);
+  const answerMatch = text.match(/\*\*Final Answer:\*\*\s*([\s\S]*?)(?=\*\*Why It Works:|\*\*Why it Works:|---|$)/);
   if (answerMatch) {
     html += `<div class="sol-answer">
       <div class="sol-answer-label"><i class="bi bi-check-circle-fill"></i> Final Answer</div>
       <div class="sol-answer-content">${mathSafeEscape(answerMatch[1].trim())}</div>
+    </div>`;
+  }
+
+  // ── Why It Works (new: real-world insight after the answer) ──
+  const whyMatch = text.match(/\*\*Why [Ii]t Works:\*\*\s*([\s\S]*?)(?=---|$)/);
+  if (whyMatch) {
+    html += `<div class="sol-section sol-why-works">
+      <div class="sol-section-label sol-why-label"><i class="bi bi-stars"></i> Why It Works</div>
+      <div class="sol-why-content">${mathSafeEscape(whyMatch[1].trim())}</div>
     </div>`;
   }
 
@@ -274,16 +314,16 @@ function renderStepBody(text) {
   if (!text) return '';
   return text.split(/\n\n+/)
     .map(p => p.trim()).filter(Boolean)
-    .map(p => `<p>${mathSafeEscape(p.replace(/\n/g,' '))}</p>`)
+    .map(p => `<p>${mathSafeEscape(p.replace(/\n/g, ' '))}</p>`)
     .join('');
 }
 
 // ===== Math-Safe Helpers =====
 function mathSafeEscape(text) {
   const maths = [];
-  text = text.replace(/\\\[[\s\S]*?\\\]/g, m => { maths.push(m); return `\x00MATH${maths.length-1}\x00`; });
-  text = text.replace(/\\\([\s\S]*?\\\)/g, m => { maths.push(m); return `\x00MATH${maths.length-1}\x00`; });
-  text = text.replace(/\$[^$\n]+\$/g,       m => { maths.push(m); return `\x00MATH${maths.length-1}\x00`; });
+  text = text.replace(/\\\[[\s\S]*?\\\]/g, m => { maths.push(m); return `\x00MATH${maths.length - 1}\x00`; });
+  text = text.replace(/\\\([\s\S]*?\\\)/g, m => { maths.push(m); return `\x00MATH${maths.length - 1}\x00`; });
+  text = text.replace(/\$[^$\n]+\$/g, m => { maths.push(m); return `\x00MATH${maths.length - 1}\x00`; });
   text = escapeHtml(text);
   text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   text = text.replace(/\x00MATH(\d+)\x00/g, (_, i) => maths[i]);
@@ -292,25 +332,97 @@ function mathSafeEscape(text) {
 
 function protectedMarked(text) {
   const maths = [];
-  text = text.replace(/\\\[[\s\S]*?\\\]/g, m => { maths.push(m); return `XMATH${maths.length-1}X`; });
-  text = text.replace(/\\\([\s\S]*?\\\)/g, m => { maths.push(m); return `XMATH${maths.length-1}X`; });
-  text = text.replace(/\$[^$\n]+\$/g,       m => { maths.push(m); return `XMATH${maths.length-1}X`; });
+  text = text.replace(/\\\[[\s\S]*?\\\]/g, m => { maths.push(m); return `XMATH${maths.length - 1}X`; });
+  text = text.replace(/\\\([\s\S]*?\\\)/g, m => { maths.push(m); return `XMATH${maths.length - 1}X`; });
+  text = text.replace(/\$[^$\n]+\$/g, m => { maths.push(m); return `XMATH${maths.length - 1}X`; });
   let html = typeof marked !== 'undefined' ? marked.parse(text) : `<pre>${escapeHtml(text)}</pre>`;
   html = html.replace(/XMATH(\d+)X/g, (_, i) => maths[i]);
   return html;
 }
 
 function escapeHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 // ===== Copy to Clipboard =====
 function copyResult(mode) {
   const bodyId = mode === 'practice' ? 'result-practice-body' : 'result-rapid-body';
-  const text   = document.getElementById(bodyId)?.innerText || '';
+  const text = document.getElementById(bodyId)?.innerText || '';
   navigator.clipboard.writeText(text).then(() => {
     if (typeof showToast === 'function') showToast('Copied to clipboard', 'success');
   });
+}
+
+// ===== Chat Follow-Up =====
+async function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  const message = input.value.trim();
+  if (!message) return;
+
+  const messagesEl = document.getElementById('chat-messages');
+  const sendBtn = document.getElementById('chat-send-btn');
+
+  // Add user bubble
+  messagesEl.insertAdjacentHTML('beforeend',
+    `<div class="chat-bubble chat-bubble-user">
+       <div class="chat-bubble-content">${escapeHtml(message)}</div>
+     </div>`);
+  input.value = '';
+  sendBtn.disabled = true;
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  // Add typing indicator
+  const typingId = 'chat-typing-' + Date.now();
+  messagesEl.insertAdjacentHTML('beforeend',
+    `<div class="chat-bubble chat-bubble-assistant chat-typing" id="${typingId}">
+       <div class="chat-bubble-content"><span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></div>
+     </div>`);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  try {
+    const headers = typeof authHeaders === 'function'
+      ? { ...authHeaders(), 'Content-Type': 'application/json' }
+      : { 'Content-Type': 'application/json' };
+    const res = await fetch('/chat', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ message, history: chatHistory }),
+    });
+    const data = await res.json();
+
+    // Remove typing indicator
+    document.getElementById(typingId)?.remove();
+
+    if (data.error) {
+      messagesEl.insertAdjacentHTML('beforeend',
+        `<div class="chat-bubble chat-bubble-assistant chat-error">
+           <div class="chat-bubble-content">Something went wrong. Please try again.</div>
+         </div>`);
+    } else {
+      // Add to history
+      chatHistory.push({ role: 'user', content: message });
+      chatHistory.push({ role: 'assistant', content: data.reply });
+
+      // Render assistant reply
+      const replyEl = document.createElement('div');
+      replyEl.className = 'chat-bubble chat-bubble-assistant';
+      replyEl.innerHTML = `<div class="chat-bubble-content">${protectedMarked(data.reply)}</div>`;
+      messagesEl.appendChild(replyEl);
+
+      // Typeset math
+      if (window.MathJax) MathJax.typesetPromise([replyEl]).catch(console.error);
+    }
+  } catch {
+    document.getElementById(typingId)?.remove();
+    messagesEl.insertAdjacentHTML('beforeend',
+      `<div class="chat-bubble chat-bubble-assistant chat-error">
+         <div class="chat-bubble-content">Something went wrong. Please try again.</div>
+       </div>`);
+  } finally {
+    sendBtn.disabled = false;
+    input.focus();
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
 }
 
 // ===== Local History (anon users) =====
@@ -324,7 +436,7 @@ function saveToLocalHistory(entry) {
     solution: entry.solution,
     imageUrl: entry.imageUrl || null,
   });
-  try { localStorage.setItem('calc_history', JSON.stringify(history.slice(0,20))); } catch {}
+  try { localStorage.setItem('calc_history', JSON.stringify(history.slice(0, 20))); } catch { }
   renderLocalHistory();
 }
 
@@ -339,14 +451,14 @@ function renderLocalHistory() {
 
   const history = getLocalHistory();
   const section = document.getElementById('history-section');
-  const list    = document.getElementById('history-list');
+  const list = document.getElementById('history-list');
 
   if (!history.length) { section?.classList.add('d-none'); return; }
   section?.classList.remove('d-none');
 
   list.innerHTML = history.map((item, idx) => {
-    const timeAgo  = formatTimeAgo(new Date(item.timestamp));
-    const preview  = (item.problem || '').slice(0, 80);
+    const timeAgo = formatTimeAgo(new Date(item.timestamp));
+    const preview = (item.problem || '').slice(0, 80);
     const badgeCls = item.mode === 'practice' ? 'badge-practice' : 'badge-rapid';
     return `
       <div class="history-item" onclick="toggleHistoryItem(${idx})">
@@ -374,16 +486,16 @@ function toggleHistory() {
 }
 
 function clearHistory() {
-  try { localStorage.removeItem('calc_history'); } catch {}
+  try { localStorage.removeItem('calc_history'); } catch { }
   document.getElementById('history-section')?.classList.add('d-none');
 }
 
 function formatTimeAgo(date) {
   const s = Math.floor((Date.now() - date) / 1000);
   if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.floor(s/60)}m ago`;
-  if (s < 86400) return `${Math.floor(s/3600)}h ago`;
-  return `${Math.floor(s/86400)}d ago`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
 }
 
 // ===== Init =====

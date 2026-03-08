@@ -6,7 +6,7 @@ from flask import Flask, render_template, request, jsonify, session
 from dotenv import load_dotenv
 import anthropic
 from supabase import create_client
-from prompts import PRACTICE_SYSTEM, RAPID_SYSTEM, QUIZ_GENERATE_SYSTEM, QUIZ_GRADE_SYSTEM
+from prompts import PRACTICE_SYSTEM, RAPID_SYSTEM, QUIZ_GENERATE_SYSTEM, QUIZ_GRADE_SYSTEM, CHAT_SYSTEM
 from formulas import FORMULAS
 
 load_dotenv()
@@ -212,6 +212,16 @@ def pdf_to_image_base64(pdf_bytes):
         raise ValueError(f"Could not read PDF: {e}")
 
 
+# ── Template context ──────────────────────────────────────────────────────────
+
+@app.context_processor
+def inject_supabase():
+    return {
+        "SUPABASE_URL": SUPABASE_URL,
+        "SUPABASE_ANON_KEY": SUPABASE_ANON_KEY
+    }
+
+
 # ── Page routes ───────────────────────────────────────────────────────────────
 
 @app.route("/")
@@ -326,7 +336,7 @@ def solve():
         try:
             resp = claude.messages.create(
                 model="claude-sonnet-4-6",
-                max_tokens=2048,
+                max_tokens=3072,
                 system=system_prompt,
                 messages=[{"role": "user", "content": text_problem}],
             )
@@ -369,7 +379,7 @@ def solve():
     try:
         resp     = claude.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=2048,
+            max_tokens=3072,
             system=system_prompt,
             messages=[{"role": "user", "content": user_content}],
         )
@@ -461,6 +471,38 @@ def quiz_grade():
         save_quiz_attempt(level, topic, problem, answer, feedback, result,
                           user_id=user.id if user else None, jwt=jwt)
         return jsonify({"feedback": feedback})
+    except anthropic.APIError as e:
+        return jsonify({"error": f"API error: {str(e)}"}), 500
+
+
+# ── Chat follow-up ────────────────────────────────────────────────────────────
+
+@app.route("/chat", methods=["POST"])
+def chat():
+    data    = request.get_json() or {}
+    message = data.get("message", "").strip()
+    history = data.get("history", [])
+
+    if not message:
+        return jsonify({"error": "No message provided."}), 400
+
+    # Build conversation: keep the last 20 messages + the new one
+    messages = []
+    for msg in history[-20:]:
+        role = msg.get("role")
+        content = msg.get("content", "")
+        if role in ("user", "assistant") and content:
+            messages.append({"role": role, "content": content})
+    messages.append({"role": "user", "content": message})
+
+    try:
+        resp = claude.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1024,
+            system=CHAT_SYSTEM,
+            messages=messages,
+        )
+        return jsonify({"reply": resp.content[0].text})
     except anthropic.APIError as e:
         return jsonify({"error": f"API error: {str(e)}"}), 500
 
