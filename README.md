@@ -44,9 +44,5 @@ python app.py
 ```
 The app will be live at `http://localhost:5000`.
 
-## Deployment
-
-This repo is configured for Vercel out of the box. Just connect your GitHub repo to Vercel and it'll pick up `vercel.json` and the Python runtime automatically. Make sure to add your environment variables to the Vercel dashboard.
-
 ## License
 MIT
