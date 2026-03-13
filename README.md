@@ -1,48 +1,40 @@
 # Calculus Tutor
 
-A calculus learning assistant that handles the math and the explanation. It uses Claude 3.5 Sonnet to solve problems from text or images and breaks them down into steps that actually make sense.
+ChatGPT kept fumbling my calc questions — wrong steps, skipped logic, no real explanation. So I built this instead. It uses Claude 3.5 Sonnet to actually walk through problems the way a good tutor would: big picture first, then step by step, in plain English before the math.
 
-## Core Features
+You can type a problem, upload a photo of your homework, or drop in a PDF. It covers Calc 1, 2, and 3.
 
-- **Multimodal Solving**: Snap a photo, upload an image, or type it in.
-- **Explain-First Solutions**: Moves beyond simple answers to show the "Big Idea" and step-by-step logic.
-- **Follow-up Chat**: If a step is confusing, just ask. The built-in chatbot knows the context of your specific problem.
-- **Interactive Quizzes**: Generate problems for Calc 1-3 and get graded feedback on your attempts.
-- **Formula Library**: A clean, categorized reference for when you just need to check a rule.
+## What it does
 
-## Tech
+- Type a problem, snap a photo, or upload an image/PDF
+- Shows the "Big Idea" before diving into steps so you actually understand what you're solving
+- Follow-up chat if something doesn't click — it knows the context of your specific problem
+- Practice quizzes with graded feedback for Calc 1–3
+- Formula reference page for quick lookups
 
-- **Backend**: Flask (Python)
-- **AI**: Claude 3.5 Sonnet (Vision + Text)
-- **Frontend**: Vanilla JS / MathJax / Bootstrap
+## Stack
+
+Flask backend, Claude 3.5 Sonnet for the AI (vision + text), vanilla JS / MathJax / Bootstrap on the frontend.
 
 ## Getting Started
 
-### Prerequisites
-- Python 3.9+
-- Anthropic API Key
-
-### Installation
+You'll need Python 3.9+ and an Anthropic API key.
 
 ```bash
-# Clone the repo
-git clone https://github.com/your-username/calc-tutor.git
-cd calc-tutor
-
-# Install requirements
+git clone https://github.com/nolanselby/calculus-teacher.git
+cd calculus-teacher
 pip install -r requirements.txt
-
-# Configure environment
 cp .env.example .env
 ```
 
-Open `.env` and add your `ANTHROPIC_API_KEY` and `FLASK_SECRET_KEY`.
+Open `.env` and add your `ANTHROPIC_API_KEY` and `FLASK_SECRET_KEY`, then run it:
 
-### Run it
 ```bash
 python app.py
 ```
-The app will be live at `http://localhost:5000`.
+
+App runs at `http://localhost:5000`.
 
 ## License
+
 MIT
