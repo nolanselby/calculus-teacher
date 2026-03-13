@@ -1,5 +1,7 @@
 import os
+# Restarting to pick up .env changes
 import base64
+import logging
 import requests as http_requests
 from datetime import date
 from flask import Flask, render_template, request, jsonify, session
@@ -7,18 +9,40 @@ from dotenv import load_dotenv
 import anthropic
 from prompts import PRACTICE_SYSTEM, RAPID_SYSTEM, QUIZ_GENERATE_SYSTEM, QUIZ_GRADE_SYSTEM, CHAT_SYSTEM
 from formulas import FORMULAS
+try:
+    import app_config
+except ImportError:
+    app_config = None
 
-load_dotenv()
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("/Users/nolanselby/Desktop/coding-projects/calc-tutor/app.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+load_dotenv("/Users/nolanselby/Desktop/coding-projects/calc-tutor/.env")
+
+def get_secret(key, default=None):
+    val = os.getenv(key)
+    if val: return val
+    if app_config and hasattr(app_config, key):
+        return getattr(app_config, key)
+    return default
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-change-in-production")
+app.secret_key = get_secret("FLASK_SECRET_KEY", "dev-secret-change-in-production")
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB
 
 # ── Clients ──────────────────────────────────────────────────────────────────
-claude = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+claude = anthropic.Anthropic(api_key=get_secret("ANTHROPIC_API_KEY"))
 
-SUPABASE_URL      = os.getenv("SUPABASE_URL", "")
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
+SUPABASE_URL      = get_secret("SUPABASE_URL", "")
+SUPABASE_ANON_KEY = get_secret("SUPABASE_ANON_KEY", "")
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 ALLOWED_MEDIA_TYPES = {
@@ -133,7 +157,7 @@ def solve():
     if text_problem and not is_file:
         try:
             resp = claude.messages.create(
-                model="claude-3-5-sonnet-20240620",
+                model="claude-3-haiku-20240307",
                 max_tokens=3072,
                 system=system_prompt,
                 messages=[{"role": "user", "content": text_problem}],
@@ -142,7 +166,11 @@ def solve():
             save_problem(mode, "text", text_problem, solution)
             return jsonify({"solution": solution, "mode": mode})
         except anthropic.APIError as e:
+            logger.error(f"Anthropic API error: {e}")
             return jsonify({"error": f"API error: {str(e)}"}), 500
+        except Exception as e:
+            logger.exception("Unexpected error in solve (text)")
+            return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
     # ── File path ─────────────────────────────────────────────────────────────
     if not is_file:
@@ -173,7 +201,7 @@ def solve():
                               "text": f"Additional context: {text_problem}"})
     try:
         resp     = claude.messages.create(
-            model="claude-3-5-sonnet-20240620",
+            model="claude-3-haiku-20240307",
             max_tokens=3072,
             system=system_prompt,
             messages=[{"role": "user", "content": user_content}],
@@ -184,7 +212,11 @@ def solve():
 
         return jsonify({"solution": solution, "mode": mode})
     except anthropic.APIError as e:
+        logger.error(f"Anthropic API error: {e}")
         return jsonify({"error": f"API error: {str(e)}"}), 500
+    except Exception as e:
+        logger.exception("Unexpected error in solve (file)")
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
 
 # ── Quiz ──────────────────────────────────────────────────────────────────────
@@ -204,7 +236,7 @@ def quiz_generate():
 
     try:
         resp    = claude.messages.create(
-            model="claude-3-5-sonnet-20240620",
+            model="claude-3-haiku-20240307",
             max_tokens=512,
             system=QUIZ_GENERATE_SYSTEM,
             messages=[{"role": "user", "content": user_msg}],
@@ -228,7 +260,7 @@ def quiz_grade():
 
     try:
         resp     = claude.messages.create(
-            model="claude-3-5-sonnet-20240620",
+            model="claude-3-haiku-20240307",
             max_tokens=1024,
             system=QUIZ_GRADE_SYSTEM,
             messages=[{"role": "user",
@@ -268,7 +300,7 @@ def chat():
 
     try:
         resp = claude.messages.create(
-            model="claude-3-5-sonnet-20240620",
+            model="claude-3-haiku-20240307",
             max_tokens=1024,
             system=CHAT_SYSTEM,
             messages=messages,
@@ -279,4 +311,5 @@ def chat():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    port = int(os.getenv("PORT", 5000))
+    app.run(debug=True, port=port)

@@ -170,7 +170,15 @@ function showResult(solution, mode) {
   } else {
     document.getElementById('result-rapid')?.classList.remove('d-none');
     const bodyEl = document.getElementById('result-rapid-body');
-    if (bodyEl) bodyEl.innerHTML = `<div class="rapid-answer">${protectedMarked(solution.trim())}</div>`;
+    if (bodyEl) bodyEl.innerHTML = `
+      <div class="sol-bubble-wrap">
+        <div class="sol-bubble sol-bubble-gold" style="align-self: center; text-align: center; max-width: 100%;">
+          <div class="sol-bubble-label" style="color: var(--gold); justify-content: center;">
+            <i class="bi bi-lightning-fill"></i> Quick Answer
+          </div>
+          <div class="rapid-answer">${protectedMarked(solution.trim())}</div>
+        </div>
+      </div>`;
     document.getElementById('chat-section')?.classList.add('d-none');
   }
 
@@ -203,21 +211,23 @@ function renderPractice(text) {
   const hasStructure = text.includes('**Problem Type:**') || text.includes('**Step') || text.includes('**Big Idea:**');
   if (!hasStructure) return `<div class="sol-fallback">${protectedMarked(text)}</div>`;
 
-  let html = '';
+  let html = '<div class="sol-bubble-wrap">';
 
   // ── Big Idea ──
   const bigIdeaMatch = text.match(/\*\*Big Idea:\*\*\s*([\s\S]*?)(?=\*\*Problem Type:|\*\*Formulas Used:|\*\*Step|$)/);
   if (bigIdeaMatch) {
-    html += `<div class="sol-section sol-big-idea">
-      <div class="sol-section-label sol-big-idea-label"><i class="bi bi-lightbulb-fill"></i> Big Idea</div>
+    html += `
+    <div class="sol-bubble sol-bubble-gold">
+      <div class="sol-bubble-label" style="color: var(--gold)"><i class="bi bi-lightbulb-fill"></i> Big Idea</div>
       <div class="sol-big-idea-content">${mathSafeEscape(bigIdeaMatch[1].trim())}</div>
     </div>`;
   }
 
   const typeMatch = text.match(/\*\*Problem Type:\*\*\s*([^\n]+)/);
   if (typeMatch) {
-    html += `<div class="sol-section">
-      <div class="sol-section-label sol-type-label"><i class="bi bi-bookmark-fill"></i> Problem Type</div>
+    html += `
+    <div class="sol-bubble sol-bubble-purple">
+      <div class="sol-bubble-label" style="color: var(--purple)"><i class="bi bi-bookmark-fill"></i> Problem Type</div>
       <div class="sol-type-content">${escapeHtml(typeMatch[1].trim())}</div>
     </div>`;
   }
@@ -227,8 +237,9 @@ function renderPractice(text) {
     const lines = formulasMatch[1].trim().split('\n').filter(l => l.trim().match(/^[-•*]/));
     if (lines.length) {
       const items = lines.map(l => `<li>${mathSafeEscape(l.replace(/^[-•*]\s*/, '').trim())}</li>`).join('');
-      html += `<div class="sol-section">
-        <div class="sol-section-label sol-formulas-label"><i class="bi bi-collection-fill"></i> Formulas Used</div>
+      html += `
+      <div class="sol-bubble sol-bubble-primary">
+        <div class="sol-bubble-label" style="color: var(--blue)"><i class="bi bi-collection-fill"></i> Formulas Used</div>
         <ul class="sol-formula-list">${items}</ul>
       </div>`;
     }
@@ -238,41 +249,57 @@ function renderPractice(text) {
   if (stepsMatch) {
     const stepBlocks = stepsMatch[1].split(/(?=^\*{0,2}Step \d+:)/m).filter(s => s.trim());
     if (stepBlocks.length) {
-      let stepsHtml = `<div class="sol-steps-wrap">
-        <div class="sol-section-label sol-steps-label mb-3"><i class="bi bi-list-ol"></i> Step-by-Step Solution</div>`;
       stepBlocks.forEach(block => {
         const h = block.match(/^\*{0,2}Step (\d+):\*{0,2}\s*(.+)/m);
         if (!h) return;
+        
+        const fullStepHeader = h[2].trim();
+        const dashIndex = fullStepHeader.indexOf(' - ');
+        
+        let actionTitle = fullStepHeader;
+        let stepIntro = '';
+        
+        if (dashIndex !== -1) {
+          actionTitle = fullStepHeader.substring(0, dashIndex).replace(/\*\*/g, '');
+          stepIntro = fullStepHeader.substring(dashIndex + 3);
+        } else {
+          actionTitle = actionTitle.replace(/\*\*/g, '');
+        }
+
         const bodyText = block.slice(block.indexOf('\n') + 1).trim();
-        stepsHtml += `<div class="sol-step">
-          <div class="sol-step-header">
-            <span class="sol-step-num">${h[1]}</span>
-            <span class="sol-step-title">${escapeHtml(h[2].trim().replace(/\*\*/g, ''))}</span>
+        html += `
+        <div class="sol-bubble sol-bubble-primary">
+          <div class="sol-bubble-label" style="color: var(--blue)">
+            <span class="sol-step-num-bubble">${h[1]}</span> Step ${h[1]}: ${escapeHtml(actionTitle)}
           </div>
-          <div class="sol-step-body">${renderStepBody(bodyText)}</div>
+          <div class="sol-step-body">
+            ${stepIntro ? `<p class="sol-step-intro"><strong>${mathSafeEscape(stepIntro)}</strong></p>` : ''}
+            ${renderStepBody(bodyText)}
+          </div>
         </div>`;
       });
-      stepsHtml += `</div>`;
-      html += stepsHtml;
     }
   }
 
   const answerMatch = text.match(/\*\*Final Answer:\*\*\s*([\s\S]*?)(?=\*\*Why It Works:|\*\*Why it Works:|---|$)/);
   if (answerMatch) {
-    html += `<div class="sol-answer">
-      <div class="sol-answer-label"><i class="bi bi-check-circle-fill"></i> Final Answer</div>
-      <div class="sol-answer-content">${mathSafeEscape(answerMatch[1].trim())}</div>
+    html += `
+    <div class="sol-bubble sol-bubble-green">
+      <div class="sol-bubble-label" style="color: var(--green)"><i class="bi bi-check-circle-fill"></i> Final Answer</div>
+      <div class="sol-answer-content" style="font-size: 1.15rem">${mathSafeEscape(answerMatch[1].trim())}</div>
     </div>`;
   }
 
   const whyMatch = text.match(/\*\*Why [Ii]t Works:\*\*\s*([\s\S]*?)(?=---|$)/);
   if (whyMatch) {
-    html += `<div class="sol-section sol-why-works">
-      <div class="sol-section-label sol-why-label"><i class="bi bi-stars"></i> Why It Works</div>
+    html += `
+    <div class="sol-bubble sol-bubble-purple">
+      <div class="sol-bubble-label" style="color: var(--purple)"><i class="bi bi-stars"></i> Why It Works</div>
       <div class="sol-why-content">${mathSafeEscape(whyMatch[1].trim())}</div>
     </div>`;
   }
 
+  html += '</div>';
   return html || `<div class="sol-fallback">${protectedMarked(text)}</div>`;
 }
 

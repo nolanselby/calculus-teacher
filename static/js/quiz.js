@@ -141,13 +141,29 @@ function renderFeedback(text) {
 
   if (!sections.length) return protectedMarked(text);
 
-  return sections.map(s => `
-    <div class="mb-3">
-      <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#6b718f;margin-bottom:6px;">
-        ${escapeHtml(s.label)}
-      </div>
-      <div>${mathSafeEscape(s.content)}</div>
-    </div>`).join('');
+  return `<div class="sol-bubble-wrap" style="padding:0;">` + 
+    sections.map(s => {
+      let colorClass = 'sol-bubble-primary';
+      let icon = 'bi-info-circle-fill';
+      let color = 'var(--blue)';
+
+      const lbl = s.label.toLowerCase();
+      if (lbl.includes('mistake') || lbl.includes('error')) { 
+        colorClass = 'sol-bubble-purple'; icon = 'bi-exclamation-triangle-fill'; color = 'var(--purple)'; 
+      }
+      else if (lbl.includes('correct') || lbl.includes('great')) { 
+        colorClass = 'sol-bubble-green'; icon = 'bi-check-circle-fill'; color = 'var(--green)'; 
+      }
+      else if (lbl.includes('tip') || lbl.includes('hint')) { 
+        colorClass = 'sol-bubble-gold'; icon = 'bi-lightbulb-fill'; color = 'var(--gold)'; 
+      }
+
+      return `
+      <div class="sol-bubble ${colorClass}" style="max-width: 100%; align-self: stretch; margin-bottom: 12px;">
+        <div class="sol-bubble-label" style="color: ${color}"><i class="bi ${icon}"></i> ${escapeHtml(s.label)}</div>
+        <div>${mathSafeEscape(s.content)}</div>
+      </div>`;
+    }).join('') + `</div>`;
 }
 
 // ===== Shared Helpers =====
